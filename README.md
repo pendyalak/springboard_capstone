@@ -4,6 +4,7 @@ Identifying Horror Authors from Their Writings
 The problem this capstone project aims at identifying horror authors from their writings. By analyzing the author style and the way of writing, the project aims at providing a model that could accurately detect the name of the author given an input text. 
 # Data
 Source : Kaggle (Spooky Author Identification)
+
 Description : The dataset contains text from works of fiction written by spooky authors of the public domain: Edgar Allan Poe, HP Lovecraft and Mary Shelley. The data was prepared by chunking larger texts into sentences using CoreNLP's MaxEnt sentence tokenizer.
 # Data Processing
 The dataset was processed by this ipython file
