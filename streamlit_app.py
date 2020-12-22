@@ -5,6 +5,9 @@ import os
 import random
 import transformers
 import warnings
+import os.path
+from os import path
+import requests
 
 import numpy as np
 import pandas as pd
@@ -103,14 +106,14 @@ def predict_test(model_name, test_data):
     # reading data
     test_dict = {"text": [test_data]}
     df_test = pd.DataFrame(test_dict, columns=["text"])
-
+    print(df_test)
     X_test_encoded = encode_text(df=df_test, tokenizer=AutoTokenizer.from_pretrained(
         model_name), max_len=128, padding=True)
 
     # Build the model
     model = build_model(model_name, 128, "1e-5",
                         ["sparse_categorical_accuracy"])
-    model.load_weights("/content/drive/MyDrive/model.h5")
+    model.load_weights(destination)
 
     # , -1, config.AUTO, labelled = False, batch_size = config.BATCH_SIZE * config.REPLICAS * 4)
     ds_test = get_tf_dataset(
@@ -119,27 +122,53 @@ def predict_test(model_name, test_data):
     return val
 
 
-st.cache(show_spinner=False)
+def download_file_from_google_drive(id, destination):
+    URL = "https://docs.google.com/uc?export=download"
+
+    session = requests.Session()
+
+    response = session.get(URL, params={'id': id}, stream=True)
+    token = get_confirm_token(response)
+
+    if token:
+        params = {'id': id, 'confirm': token}
+        response = session.get(URL, params=params, stream=True)
+
+    save_response_content(response, destination)
 
 
-def load_model():
-    tokenizer = AutoTokenizer.from_pretrained(
-        "twmkn9/distilbert-base-uncased-squad2")
-    model = AutoModelForQuestionAnswering.from_pretrained(
-        "twmkn9/distilbert-base-uncased-squad2")
-    nlp_pipe = pipeline('question-answering', model=model, tokenizer=tokenizer)
-    return nlp_pipe
+def get_confirm_token(response):
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            return value
 
+    return None
+
+
+def save_response_content(response, destination):
+    CHUNK_SIZE = 32768
+
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(CHUNK_SIZE):
+            if chunk:  # filter out keep-alive new chunks
+                f.write(chunk)
+
+
+file_id = '1mIGaPh0npzkCIsNUdyyI-tJbxgtfRvR2'
+destination = './model.h5'
+if not (path.exists(destination)):
+    download_file_from_google_drive(file_id, destination)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 logging.basicConfig(level=logging.ERROR)
-st.header("Prototyping an NLP solution")
-st.text("This demo uses a model for Question Answering.")
-add_text_sidebar = st.sidebar.title("Menu")
-add_text_sidebar = st.sidebar.text("Just some random text.")
-question = st.text_input(label='Insert a question.')
-# text = st.text_area(label="Context")
-output = predict_test("bert-large-cased", str(question))
+st.header("Spooky Author Identification")
+st.text("This demo uses a model for Predicting Author Writings of Edgar Allan Poe, HP Lovecraft, Mary Shelley .")
+question = st.text_area(label='Insert a question.')
+print("Question:", question)
+temp_dict = {0: "Edgar Allan Poe", 1: "HP Lovercraft", 2: "Mary Shelley"}
 if not (len(str(question)) == 0):
-    x_dict = npl_pipe(context=text, question=question
-    st.text('Answer: ', output)
+    print("Question: ", question)
+    output = predict_test("bert-large-cased", question)
+    print(output)
+    out_var = "This belongs to: " + str(temp_dict[output])
+    st.write(out_var)
